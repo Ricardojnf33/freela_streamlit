@@ -42,7 +42,7 @@ devco_data = data[data['DIVISÃO'] == 'DEVco']
 
 # Configurar as páginas
 st.sidebar.title("Navegação")
-page = st.sidebar.radio("Ir para", ["Home", "ASSETco", "DEVco"])
+page = st.sidebar.radio("Ir para", ["Home", "ASSETco", "DEVco", "Projetos"])
 
 # ------------------ Página Home ------------------
 if page == "Home":
@@ -534,3 +534,334 @@ elif page == "DEVco":
     plt.tight_layout()
     st.pyplot(fig)
 
+    # ------------------ Página Projetos ------------------
+
+elif page == "Projetos":
+    st.title("Dashboard de Plantio - Projetos")
+    st.write("Visualização dos dados de plantio para diferentes projetos.")
+
+    # Assetco: Separar em dataframes para os projetos dentro da divisão ASSETco
+    rio_vento_expansao_assetco = assetco_data[assetco_data['PROJETO'] == 'Rio do Vento Expansão']
+    rio_vento_assetco = assetco_data[assetco_data['PROJETO'] == 'Rio do Vento']
+    umari_assetco = assetco_data[assetco_data['PROJETO'] == 'UMARI']
+
+    # Devco: Separar em dataframes para os projetos dentro da divisão DEVco
+    torre_anemometrica_devco = devco_data[devco_data['PROJETO'] == 'Torre Anemométrica']
+
+    # 1. Rio do Vento Expansão Assetco
+    st.header("Rio do Vento Expansão - Assetco")
+
+    # Preparar os dados para rio_vento_expansao_assetco
+    rio_vento_expansao_assetco['Área Sem Plantio (%)'] = 100 - rio_vento_expansao_assetco['Plantio (%)']
+    rio_vento_expansao_assetco['Mortalidade (Qtd.)'] = rio_vento_expansao_assetco['QDE de Mudas (UND)'] * 0.0826
+
+    # Selecionar e organizar os dados
+    plot_rio_vento_expansao_assetco = rio_vento_expansao_assetco[['DESCRIÇÃO DO PRF', 'Plantio (%)', 'Área Sem Plantio (%)']].copy()
+    plot_rio_vento_expansao_assetco.set_index('DESCRIÇÃO DO PRF', inplace=True)
+    plot_rio_vento_expansao_assetco.sort_values('Plantio (%)', inplace=True)
+
+    # Criar a visualização
+    fig, ax = plt.subplots(figsize=(18, 10))
+    ind = range(len(plot_rio_vento_expansao_assetco))
+    bar_width = 0.9
+
+    # Gráfico de barras empilhadas
+    p1 = ax.bar(ind, plot_rio_vento_expansao_assetco['Plantio (%)'], bar_width, color='green', label='Área Plantada (%)')
+    p2 = ax.bar(ind, plot_rio_vento_expansao_assetco['Área Sem Plantio (%)'], bar_width, bottom=plot_rio_vento_expansao_assetco['Plantio (%)'], color='orange', label='Área Sem Plantio (%)')
+
+    # Adicionar linha de mortalidade
+    ax.axhline(y=8.26, color='red', linestyle='--', linewidth=1, label='Taxa de Mortalidade')
+    ax.text(len(ind) - 0.5, 8.26 + 1, '8,26%', color='red', ha='right', va='bottom', fontsize=12, fontweight='bold')
+
+    # Customizações do gráfico
+    ax.set_ylabel('Percentual (%)')
+    ax.set_title('Rio Vento Expansao ASSETco - Percentual de Aproveitamento das Áreas de Plantio - Rio do Vento Expansão')
+
+    # Definir os nomes do eixo X
+    ax.set_xticks(ind)
+    ax.set_xticklabels(plot_rio_vento_expansao_assetco.index, rotation=90)
+
+    # Limites e ajustes do gráfico
+    ax.set_ylim(0, 110)
+    ax.margins(x=0)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.35), ncol=3)
+
+    # Adicionar valores percentuais nas barras
+    for idx in ind:
+        plantio_pct = plot_rio_vento_expansao_assetco['Plantio (%)'].iloc[idx]
+        sem_plantio_pct = plot_rio_vento_expansao_assetco['Área Sem Plantio (%)'].iloc[idx]
+
+        # Exibir percentuais dentro das barras
+        if plantio_pct > 0:
+            ax.text(idx, plantio_pct / 2, f"{plantio_pct:.1f}%", ha='center', va='center', color='white', fontsize=10, fontweight='bold')
+
+        if sem_plantio_pct > 0:
+            ax.text(idx, plantio_pct + sem_plantio_pct / 2, f"{sem_plantio_pct:.1f}%", ha='center', va='center', color='black', fontsize=10, fontweight='bold')
+
+    # Ajustes finais no layout
+    plt.tight_layout()
+    st.pyplot(fig)
+
+    # Novo gráfico de resumo das áreas de plantio
+    st.subheader("Resumo das Áreas de Plantio por PRF - Rio do Vento Expansão")
+
+    fig, axs = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+    rio_vento_expansao_assetco.set_index('DESCRIÇÃO DO PRF', inplace=True)
+
+    # Plot 1: Área Plantada
+    axs[0].bar(rio_vento_expansao_assetco.index, rio_vento_expansao_assetco['Plantio (ha)'], color='sandybrown')
+    axs[0].set_ylabel('Área Plantada (ha)')
+    axs[0].set_title('Resumo das Áreas de Plantio - Rio do Vento Expansão')
+    for i, v in enumerate(rio_vento_expansao_assetco['Plantio (ha)']):
+        axs[0].text(i, v + 0.01, f'{v:.2f}', ha='center')
+
+    # Plot 2: Quantidade de Mudas
+    axs[1].bar(rio_vento_expansao_assetco.index, rio_vento_expansao_assetco['QDE de Mudas (UND)'], color='lightgreen')
+    axs[1].set_ylabel('Quantidade de Mudas (UND)')
+    for i, v in enumerate(rio_vento_expansao_assetco['QDE de Mudas (UND)']):
+        axs[1].text(i, v + 0.01, f'{v:.0f}', ha='center')
+
+    # Plot 3: Mortalidade
+    axs[2].bar(rio_vento_expansao_assetco.index, rio_vento_expansao_assetco['Mortalidade (Qtd.)'], color='lightcoral')
+    axs[2].set_ylabel('Mortalidade (Qtd.)')
+    for i, v in enumerate(rio_vento_expansao_assetco['Mortalidade (Qtd.)']):
+        axs[2].text(i, v + 0.01, f'{v:.2f}', ha='center')
+
+    # Corrigir o eixo X para mostrar os nomes da coluna 'DESCRIÇÃO DO PRF'
+    plt.xticks(range(len(rio_vento_expansao_assetco.index)), rio_vento_expansao_assetco.index, rotation=90, ha='center')
+
+    plt.tight_layout()
+    st.pyplot(fig)
+
+
+    # 2. Rio do Vento Assetco
+    st.header("Rio do Vento - Assetco")
+
+    # Preparar os dados para rio_vento_assetco
+    rio_vento_assetco['Área Sem Plantio (%)'] = 100 - rio_vento_assetco['Plantio (%)']
+    rio_vento_assetco['Mortalidade (Qtd.)'] = rio_vento_assetco['QDE de Mudas (UND)'] * 0.0826
+
+    # Selecionar e organizar os dados
+    plot_rio_vento_assetco = rio_vento_assetco[['DESCRIÇÃO DO PRF', 'Plantio (%)', 'Área Sem Plantio (%)']].copy()
+    plot_rio_vento_assetco.set_index('DESCRIÇÃO DO PRF', inplace=True)
+    plot_rio_vento_assetco.sort_values('Plantio (%)', inplace=True)
+
+    # Criar a visualização
+    fig, ax = plt.subplots(figsize=(18, 10))
+    ind = range(len(plot_rio_vento_assetco))
+    bar_width = 0.9
+
+    p1 = ax.bar(ind, plot_rio_vento_assetco['Plantio (%)'], bar_width, color='green', label='Área Plantada (%)')
+    p2 = ax.bar(ind, plot_rio_vento_assetco['Área Sem Plantio (%)'], bar_width, bottom=plot_rio_vento_assetco['Plantio (%)'], color='orange', label='Área Sem Plantio (%)')
+
+    ax.axhline(y=8.26, color='red', linestyle='--', linewidth=1, label='Taxa de Mortalidade')
+    ax.text(len(ind) - 0.5, 8.26 + 1, '8,26%', color='red', ha='right', va='bottom', fontsize=12, fontweight='bold')
+
+    ax.set_ylabel('Percentual (%)')
+    ax.set_title('Percentual de Aproveitamento das Áreas de Plantio - Rio do Vento ASSETco')
+
+    ax.set_xticks(ind)
+    ax.set_xticklabels(plot_rio_vento_assetco.index, rotation=90)
+
+    ax.set_ylim(0, 110)
+    ax.margins(x=0)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.35), ncol=3)
+
+    for idx in ind:
+        plantio_pct = plot_rio_vento_assetco['Plantio (%)'].iloc[idx]
+        sem_plantio_pct = plot_rio_vento_assetco['Área Sem Plantio (%)'].iloc[idx]
+
+        if plantio_pct > 0:
+            ax.text(idx, plantio_pct / 2, f"{plantio_pct:.1f}%", ha='center', va='center', color='white', fontsize=10, fontweight='bold')
+
+        if sem_plantio_pct > 0:
+            ax.text(idx, plantio_pct + sem_plantio_pct / 2, f"{sem_plantio_pct:.1f}%", ha='center', va='center', color='black', fontsize=10, fontweight='bold')
+
+    plt.tight_layout()
+    st.pyplot(fig)
+
+    # Novo gráfico de resumo das áreas de plantio para Rio do Vento
+    st.subheader("Resumo das Áreas de Plantio - Rio do Vento")
+
+    fig, axs = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+    rio_vento_assetco.set_index('DESCRIÇÃO DO PRF', inplace=True)
+
+    # Plot 1: Área Plantada
+    axs[0].bar(rio_vento_assetco.index, rio_vento_assetco['Plantio (ha)'], color='sandybrown')
+    axs[0].set_ylabel('Área Plantada (ha)')
+    axs[0].set_title('Resumo das Áreas de Plantio - Rio do Vento')
+    for i, v in enumerate(rio_vento_assetco['Plantio (ha)']):
+        axs[0].text(i, v + 0.01, f'{v:.2f}', ha='center')
+
+    # Plot 2: Quantidade de Mudas
+    axs[1].bar(rio_vento_assetco.index, rio_vento_assetco['QDE de Mudas (UND)'], color='lightgreen')
+    axs[1].set_ylabel('Quantidade de Mudas (UND)')
+    for i, v in enumerate(rio_vento_assetco['QDE de Mudas (UND)']):
+        axs[1].text(i, v + 0.01, f'{v:.0f}', ha='center')
+
+    # Plot 3: Mortalidade
+    axs[2].bar(rio_vento_assetco.index, rio_vento_assetco['Mortalidade (Qtd.)'], color='lightcoral')
+    axs[2].set_ylabel('Mortalidade (Qtd.)')
+    for i, v in enumerate(rio_vento_assetco['Mortalidade (Qtd.)']):
+        axs[2].text(i, v + 0.01, f'{v:.2f}', ha='center')
+
+    # Corrigir o eixo X para mostrar os nomes da coluna 'DESCRIÇÃO DO PRF'
+    plt.xticks(range(len(rio_vento_assetco.index)), rio_vento_assetco.index, rotation=90, ha='center')
+
+    plt.tight_layout()
+    st.pyplot(fig)
+
+
+
+    # 3. Umari Assetco
+    st.header("Resumo das Áreas de Plantio por PRF - Umari")
+    
+    # Preparar os dados para umari_assetco
+    umari_assetco['Área Sem Plantio (%)'] = 100 - umari_assetco['Plantio (%)']
+    umari_assetco['Mortalidade (Qtd.)'] = umari_assetco['QDE de Mudas (UND)'] * 0.0826
+
+    # Selecionar e organizar os dados
+    plot_umari_assetco = umari_assetco[['DESCRIÇÃO DO PRF', 'Plantio (%)', 'Área Sem Plantio (%)']].copy()
+    plot_umari_assetco.set_index('DESCRIÇÃO DO PRF', inplace=True)
+    plot_umari_assetco.sort_values('Plantio (%)', inplace=True)
+
+    # Criar a visualização
+    fig, ax = plt.subplots(figsize=(18, 10))
+    ind = range(len(plot_umari_assetco))
+    bar_width = 0.9
+
+    p1 = ax.bar(ind, plot_umari_assetco['Plantio (%)'], bar_width, color='green', label='Área Plantada (%)')
+    p2 = ax.bar(ind, plot_umari_assetco['Área Sem Plantio (%)'], bar_width, bottom=plot_umari_assetco['Plantio (%)'], color='orange', label='Área Sem Plantio (%)')
+
+    ax.axhline(y=8.26, color='red', linestyle='--', linewidth=1, label='Taxa de Mortalidade')
+    ax.text(len(ind) - 0.5, 8.26 + 1, '8,26%', color='red', ha='right', va='bottom', fontsize=12, fontweight='bold')
+
+    ax.set_ylabel('Percentual (%)')
+    ax.set_title('Percentual de Aproveitamento das Áreas de Plantio - Umari')
+
+    ax.set_xticks(ind)
+    ax.set_xticklabels(plot_umari_assetco.index, rotation=90)
+
+    ax.set_ylim(0, 110)
+    ax.margins(x=0)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.35), ncol=3)
+
+    for idx in ind:
+        plantio_pct = plot_umari_assetco['Plantio (%)'].iloc[idx]
+        sem_plantio_pct = plot_umari_assetco['Área Sem Plantio (%)'].iloc[idx]
+
+        if plantio_pct > 0:
+            ax.text(idx, plantio_pct / 2, f"{plantio_pct:.1f}%", ha='center', va='center', color='white', fontsize=10, fontweight='bold')
+
+        if sem_plantio_pct > 0:
+            ax.text(idx, plantio_pct + sem_plantio_pct / 2, f"{sem_plantio_pct:.1f}%", ha='center', va='center', color='black', fontsize=10, fontweight='bold')
+
+    plt.tight_layout()
+    st.pyplot(fig)
+
+    # Novo gráfico de resumo das áreas de plantio
+    st.subheader("Resumo das Áreas de Plantio por PRF - Umari")
+
+    fig, axs = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+    umari_assetco.set_index('DESCRIÇÃO DO PRF', inplace=True)
+
+    # Plot 1: Área Plantada
+    axs[0].bar(umari_assetco.index, umari_assetco['Plantio (ha)'], color='sandybrown')
+    axs[0].set_ylabel('Área Plantada (ha)')
+    axs[0].set_title('Resumo das Áreas de Plantio - Umari')
+    for i, v in enumerate(umari_assetco['Plantio (ha)']):
+        axs[0].text(i, v + 0.01, f'{v:.2f}', ha='center')
+
+    # Plot 2: Quantidade de Mudas
+    axs[1].bar(umari_assetco.index, umari_assetco['QDE de Mudas (UND)'], color='lightgreen')
+    axs[1].set_ylabel('Quantidade de Mudas (UND)')
+    for i, v in enumerate(umari_assetco['QDE de Mudas (UND)']):
+        axs[1].text(i, v + 0.01, f'{v:.0f}', ha='center')
+
+    # Plot 3: Mortalidade
+    axs[2].bar(umari_assetco.index, umari_assetco['Mortalidade (Qtd.)'], color='lightcoral')
+    axs[2].set_ylabel('Mortalidade (Qtd.)')
+    for i, v in enumerate(umari_assetco['Mortalidade (Qtd.)']):
+        axs[2].text(i, v + 0.01, f'{v:.2f}', ha='center')
+
+    plt.xticks(rotation=90, ha='center')
+    plt.tight_layout()
+    st.pyplot(fig)
+
+
+    # 4. Torre Anemométrica DEVco
+    st.header("Resumo das Áreas de Plantio por PRF - Torre Anemométrica")
+    
+    # Preparar os dados para torre_anemometrica_devco
+    torre_anemometrica_devco['Área Sem Plantio (%)'] = 100 - torre_anemometrica_devco['Plantio (%)']
+    torre_anemometrica_devco['Mortalidade (Qtd.)'] = torre_anemometrica_devco['QDE de Mudas (UND)'] * 0.0826
+
+    # Selecionar e organizar os dados
+    plot_torre_anemometrica_devco = torre_anemometrica_devco[['DESCRIÇÃO DO PRF', 'Plantio (%)', 'Área Sem Plantio (%)']].copy()
+    plot_torre_anemometrica_devco.set_index('DESCRIÇÃO DO PRF', inplace=True)
+    plot_torre_anemometrica_devco.sort_values('Plantio (%)', inplace=True)
+
+    # Criar a visualização
+    fig, ax = plt.subplots(figsize=(18, 10))
+    ind = range(len(plot_torre_anemometrica_devco))
+    bar_width = 0.9
+
+    p1 = ax.bar(ind, plot_torre_anemometrica_devco['Plantio (%)'], bar_width, color='green', label='Área Plantada (%)')
+    p2 = ax.bar(ind, plot_torre_anemometrica_devco['Área Sem Plantio (%)'], bar_width, bottom=plot_torre_anemometrica_devco['Plantio (%)'], color='orange', label='Área Sem Plantio (%)')
+
+    ax.axhline(y=8.26, color='red', linestyle='--', linewidth=1, label='Taxa de Mortalidade')
+    ax.text(len(ind) - 0.5, 8.26 + 1, '8,26%', color='red', ha='right', va='bottom', fontsize=12, fontweight='bold')
+
+    ax.set_ylabel('Percentual (%)')
+    ax.set_title('Percentual de Aproveitamento das Áreas de Plantio - Torre Anemométrica')
+
+    ax.set_xticks(ind)
+    ax.set_xticklabels(plot_torre_anemometrica_devco.index, rotation=90)
+
+    ax.set_ylim(0, 110)
+    ax.margins(x=0)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.35), ncol=3)
+
+    for idx in ind:
+        plantio_pct = plot_torre_anemometrica_devco['Plantio (%)'].iloc[idx]
+        sem_plantio_pct = plot_torre_anemometrica_devco['Área Sem Plantio (%)'].iloc[idx]
+
+        if plantio_pct > 0:
+            ax.text(idx, plantio_pct / 2, f"{plantio_pct:.1f}%", ha='center', va='center', color='white', fontsize=10, fontweight='bold')
+
+        if sem_plantio_pct > 0:
+            ax.text(idx, plantio_pct + sem_plantio_pct / 2, f"{sem_plantio_pct:.1f}%", ha='center', va='center', color='black', fontsize=10, fontweight='bold')
+
+    plt.tight_layout()
+    st.pyplot(fig)
+
+
+    # Novo gráfico de resumo das áreas de plantio
+    st.subheader("Resumo das Áreas de Plantio por PRF - Torre Anemométrica")
+
+    fig, axs = plt.subplots(3, 1, figsize=(16, 12), sharex=True)
+    torre_anemometrica_devco.set_index('DESCRIÇÃO DO PRF', inplace=True)
+
+
+    # Plot 1: Área Plantada
+    axs[0].bar(torre_anemometrica_devco.index, torre_anemometrica_devco['Plantio (ha)'], color='sandybrown')
+    axs[0].set_ylabel('Área Plantada (ha)')
+    axs[0].set_title('Resumo das Áreas de Plantio - Torre Anemométrica')
+    for i, v in enumerate(torre_anemometrica_devco['Plantio (ha)']):
+        axs[0].text(i, v + 0.01, f'{v:.2f}', ha='center')
+
+    # Plot 2: Quantidade de Mudas
+    axs[1].bar(torre_anemometrica_devco.index, torre_anemometrica_devco['QDE de Mudas (UND)'], color='lightgreen')
+    axs[1].set_ylabel('Quantidade de Mudas (UND)')
+    for i, v in enumerate(torre_anemometrica_devco['QDE de Mudas (UND)']):
+        axs[1].text(i, v + 0.01, f'{v:.0f}', ha='center')
+
+    # Plot 3: Mortalidade
+    axs[2].bar(torre_anemometrica_devco.index, torre_anemometrica_devco['Mortalidade (Qtd.)'], color='lightcoral')
+    axs[2].set_ylabel('Mortalidade (Qtd.)')
+    for i, v in enumerate(torre_anemometrica_devco['Mortalidade (Qtd.)']):
+        axs[2].text(i, v + 0.01, f'{v:.2f}', ha='center')
+
+    plt.xticks(rotation=90, ha='center')
+    plt.tight_layout()
+    st.pyplot(fig)
